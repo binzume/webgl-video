@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ja">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>webgl video player</title>
+  <script src="webglvideo.js" type="text/javascript"></script>
+  <script src="keyevent.js" type="text/javascript"></script>
+  <script id="shader-fs" type="x-shader/x-fragment">
+	precision highp float;
+
+	varying vec2 v_TextureCoord;
+
+	uniform float u_aspectRatio;
+	uniform float u_videoFrame;
+	uniform sampler2D u_sampler;
+
+	uniform vec2 u_clickCoord[10];
+	uniform float u_clickAmp[10];
+	uniform int u_clickCount;
+
+	highp vec2 calcTexCoord(vec2 texCoord) {
+		const float amp = 0.4;
+
+		vec2 d = vec2(0.0,0.0);
+		for (int i = 0 ; i < 10 ; i++) {
+			if (i < u_clickCount) {
+				vec2 center = u_clickCoord[i];
+				float dist = length(texCoord - center);
+				float r = sin(dist*dist*100.0 - u_videoFrame*0.2) * amp / (1.0 + dist*10.0) * u_clickAmp[i];
+				d += (texCoord - center) * r;
+			}
+		}
+
+		return texCoord + d;
+	}
+
+	void main(void) {
+		vec2 tc = calcTexCoord(v_TextureCoord);
+		if (tc.x < 0.0 || tc.y < 0.0 || tc.x > 1.0 || tc.y > 1.0) {
+			gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+		} else {
+			gl_FragColor = texture2D(u_sampler,tc);
+		}
+	}
+  </script>
+  <script id="shader-vs" type="x-shader/x-vertex">
+	precision highp float;
+	attribute vec2 aVertexPosition;
+	attribute vec2 aTextureCoord;
+	varying vec2 v_TextureCoord;
+
+	void main(void) {
+		gl_Position = vec4(aVertexPosition, 0, 1.0);
+		v_TextureCoord = aTextureCoord;
+	}
+  </script>
+
+  <script>
+	function fullScreen(f) {
+		var video = document.getElementById('glcanvas');
+		if (f) {
+		    if( document.body.webkitRequestFullScreen ) {
+		      video.style.width = window.screen.width + "px";
+		      video.style.height = window.screen.height + "px";
+		      video.webkitRequestFullScreen();
+		    }
+		    if( document.body.mozRequestFullScreen ) {
+		      document.body.mozRequestFullScreen();
+		    }
+		} else {
+		    document.webkitExitFullscreen();
+		}
+	}
+
+	window.addEventListener('load',(function(e){
+	    window.addEventListener("keydown", onKeyDown, false);
+		var e = document.getElementById('oculus_screen');
+		e.addEventListener('dragover', function(e){
+			e.preventDefault();
+		});
+		
+		e.addEventListener('drop', function(e){
+			e.preventDefault();
+			var file = e.dataTransfer.files[0];
+		    document.getElementById('video').src = URL.createObjectURL(file);
+		    document.getElementById('video').play();
+	
+			clickCoord = [e.clientX/1280, 1.0 - e.clientY/720];
+			clickAmp = [1.0];
+		    
+		});
+	
+		// add wave
+		document.getElementById('glcanvas').addEventListener('click', function(e){
+			e.preventDefault();
+			var c = document.getElementById('glcanvas');
+			
+			clickCoord.unshift(e.layerX/c.width, 1.0 - e.layerY/c.height);
+			clickCoord = clickCoord.slice(0,20);
+	
+			clickAmp.unshift(1.0);
+			clickAmp = clickAmp.slice(0,10);
+			
+		});
+	
+		start("video", "glcanvas");
+	
+	}),false);
+  </script>
+ </head>
+ <body>
+   please drop mp4(H.264/AAC) video. <br />
+
+  <div id="oculus_screen"  style="width:100%;background-color:black;text-align:center;">
+    <canvas id="glcanvas" tabindex='1' width="1280" height="720"></canvas>
+  </div>
+
+  <video id="video" src="" autoplay="" style="display:none"></video>
+
+  <div>
+    key: <br />
+      seek: reft right<br />
+      volume: up down<br />
+      play/pause: space<br />
+      fullscreen: enter <br />
+  </div>
+
+</body>
+</html>
+
