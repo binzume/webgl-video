@@ -18,8 +18,8 @@ var canvasElement;
 
 var intervalID;
 
-var wrapx = 0.05;
-var scaleR = 1.0;
+var wrapx = 0.01;
+var scaleR = 0.60;
 
 var clickCoord = [0.25,0.8];
 var clickAmp = [1.0];

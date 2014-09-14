@@ -23,25 +23,26 @@
         const float aspect = 16.0 / 9.0;
         vec2 scale_factor = vec2(u_scaleR,u_scaleR / aspect * 2.0);
 
-        if (texCoord.s > 0.5) {
-            vec2 d = ( texCoord - vec2(0.25 + 0.5,0.5) ) * vec2(2.0, aspect);
-            float dd = d.x * d.x + d.y*d.y;
-            vec2 t1 = d * (1.0 + 0.22 * dd + 0.24 * dd*dd);
-            return t1 * scale_factor + vec2(0.5 + u_wrapx,0.5);
-        } else {
-            vec2 d = ( texCoord - vec2(0.25,0.5) ) * vec2(2.0, aspect);
-            float dd = d.x * d.x + d.y*d.y;
-            vec2 t1 = d * (1.0 + 0.22 * dd + 0.24 * dd*dd);
-            return t1 * scale_factor + vec2(0.5 - u_wrapx ,0.5);
-        }
+        vec2 d = ( texCoord - vec2(0.25,0.5) ) * vec2(2.0, aspect);
+        float dd = d.x * d.x + d.y*d.y;
+        vec2 t1 = d * (1.0 + 0.22 * dd + 0.24 * dd*dd);
+        return t1 * scale_factor;
 	}
-	
+
 	void main(void) {
-        vec2 tc = calcTexCoord(v_TextureCoord);
-        if (tc.x < 0.0 || tc.y < 0.0 || tc.x > 1.0 || tc.y > 1.0) {
+        vec2 tc;
+		if (v_TextureCoord.x > 0.5) {
+	        tc = calcTexCoord(v_TextureCoord - vec2(0.5, 0));
+	    } else {
+	        tc = calcTexCoord(v_TextureCoord);
+	    }
+        if (tc.x < -0.5 || tc.y < -0.5 || tc.x > 0.5 || tc.y > 0.5) {
           gl_FragColor = vec4(0.0,0.0,0.2,1.0);
         } else {
-          gl_FragColor = texture2D(u_sampler,tc);
+          vec4 col_r = texture2D(u_sampler,tc * 0.985  + vec2(0.5 - u_wrapx ,0.5));
+          vec4 col_g = texture2D(u_sampler,tc  + vec2(0.5 - u_wrapx ,0.5));
+          vec4 col_b = texture2D(u_sampler,tc * 1.02 + vec2(0.5 - u_wrapx ,0.5));
+          gl_FragColor = vec4(col_r.r,col_g.g,col_b.b,1.0);
         }
 	}
   </script>
