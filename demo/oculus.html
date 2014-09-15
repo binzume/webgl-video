@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Script-Type" content="text/javascript" />
   <meta http-equiv="Content-Style-Type" content="text/css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>jona player</title>
+  <title>Video Player for Rift</title>
   <script src="webglvideo.js?0529" type="text/javascript"></script>
   <script src="keyevent.js?0529" type="text/javascript"></script>
   <script id="shader-fs" type="x-shader/x-fragment">
@@ -16,12 +16,12 @@
 	uniform float u_VideoFrame;
 	uniform sampler2D u_sampler;
 
-	uniform float u_scaleR; 
+	uniform float u_scaleR;
 	uniform float u_wrapx;
 
 	vec2 calcTexCoord(vec2 texCoord) {
         const float aspect = 16.0 / 9.0;
-        vec2 scale_factor = vec2(u_scaleR,u_scaleR / aspect * 2.0);
+        vec2 scale_factor = vec2(u_scaleR ,u_scaleR * u_aspectRatio * 0.5);
 
         vec2 d = ( texCoord - vec2(0.25,0.5) ) * vec2(2.0, aspect);
         float dd = d.x * d.x + d.y*d.y;
@@ -31,18 +31,21 @@
 
 	void main(void) {
         vec2 tc;
+        vec2 d;
 		if (v_TextureCoord.x > 0.5) {
 	        tc = calcTexCoord(v_TextureCoord - vec2(0.5, 0));
+	        d =  vec2(0.5 - u_wrapx ,0.5);
 	    } else {
 	        tc = calcTexCoord(v_TextureCoord);
+	        d =  vec2(0.5 + u_wrapx ,0.5);
 	    }
-        if (tc.x < -0.5 || tc.y < -0.5 || tc.x > 0.5 || tc.y > 0.5) {
-          gl_FragColor = vec4(0.0,0.0,0.2,1.0);
+        if (tc.x + d.x < 0.0 || tc.y < -0.5 || tc.x + d.x > 1.0 || tc.y > 0.5) {
+          gl_FragColor = vec4(0.0,0.0,0.1,1.0);
         } else {
-          vec4 col_r = texture2D(u_sampler,tc * 0.985  + vec2(0.5 - u_wrapx ,0.5));
-          vec4 col_g = texture2D(u_sampler,tc  + vec2(0.5 - u_wrapx ,0.5));
-          vec4 col_b = texture2D(u_sampler,tc * 1.02 + vec2(0.5 - u_wrapx ,0.5));
-          gl_FragColor = vec4(col_r.r,col_g.g,col_b.b,1.0);
+          vec4 col_r = texture2D(u_sampler, tc * 0.985+ d);
+          vec4 col_g = texture2D(u_sampler, tc * 1.00 + d);
+          vec4 col_b = texture2D(u_sampler, tc * 1.02 + d);
+          gl_FragColor = vec4(col_r.r,col_g.g,col_b.b,col_r.a);
         }
 	}
   </script>
@@ -115,6 +118,8 @@
       adjast wrap: End Home(Z/X) <br />
       zoom: PgUP/Down (W/S) <br />
   </div>
+
+  <canvas id="gluicanvas" style="visibility:hidden" width="512" height="512"></canvas>
 
 </body>
 </html>

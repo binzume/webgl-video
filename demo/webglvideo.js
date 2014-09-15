@@ -12,14 +12,17 @@ var texCoordAttribute;
 
 var videoTexture;
 
+var uiPanelTexture;
+var uiPanelVisible = false;
+
 // video and canvas html element
 var videoElement;
 var canvasElement;
 
 var intervalID;
 
-var wrapx = 0.01;
-var scaleR = 0.60;
+var wrapx = 0.00;
+var scaleR = 0.80;
 
 var clickCoord = [0.25,0.8];
 var clickAmp = [1.0];
@@ -56,18 +59,28 @@ function start(v,c) {
 
 	texCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
 	gl.enableVertexAttribArray(texCoordAttribute);
-
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.enable(gl.BLEND);
 	initBuffers();
-	refresh();
 
 	videoElement.addEventListener("canplaythrough", function(){
 		videoElement.play();
-		clearInterval(intervalID);
-		intervalID = setInterval(drawScene, 40);
+		if (intervalID) {
+			cancelAnimationFrame(intervalID);
+			// clearInterval(intervalID);
+			intervalID = null;
+		}
+		intervalID = requestAnimationFrame(drawFrame);
+		// intervalID = setInterval(drawScene, 40);
 		videoFrame = 0;
+		refresh();
 	}, true);
 	videoElement.addEventListener("ended", function() {
-		clearInterval(intervalID);
+		if (intervalID) {
+			cancelAnimationFrame(intervalID);
+			// clearInterval(intervalID);
+			intervalID = null;
+		}
 	}, true);
 }
 
@@ -76,7 +89,7 @@ function refresh() {
 
 	// uniforms
 	var u_aspectRatio = gl.getUniformLocation(shaderProgram, "u_aspectRatio");
-	gl.uniform1f(u_aspectRatio, 16/9);
+	gl.uniform1f(u_aspectRatio, videoElement.videoWidth / videoElement.videoHeight);
 
 	var u_scaleR = gl.getUniformLocation(shaderProgram, "u_scaleR");
 	gl.uniform1f(u_scaleR, scaleR);
@@ -123,6 +136,12 @@ function initBuffers() {
 
 	// texture
 	videoTexture = createTexture();
+	
+	if (document.getElementById("gluicanvas")) {
+		var canvas = document.getElementById("gluicanvas");
+		uiPanelTexture = createTexture();
+		updateTexture(uiPanelTexture, canvas);
+	}
 
 }
 
@@ -143,6 +162,20 @@ function updateTexture(tex, video) {
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 }
 
+
+var lastPos = 0;
+var lastTime = 0;
+function drawFrame() {
+	var t = 0 + Date.now();
+	var pos = videoElement.webkitDecodedFrameCount || videoElement.currentTime;
+	if (pos != lastPos || t - lastTime > 200) {
+		// console.log(lastTime);
+		drawScene();
+		lastTime = t;
+		lastPos = pos;
+	}
+	intervalID = requestAnimationFrame(drawFrame);
+}
 
 
 function drawScene() {
@@ -187,8 +220,20 @@ function drawScene() {
 	// index
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertIndexBuffer);
 
+	var u_wrapx = gl.getUniformLocation(shaderProgram, "u_wrapx");
+	gl.uniform1f(u_wrapx, wrapx);
+
 	// draw
 	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+
+	if (uiPanelVisible && uiPanelTexture) {
+		gl.uniform1f(u_wrapx, wrapx - 0.02);
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, uiPanelTexture);
+		gl.uniform1i(gl.getUniformLocation(shaderProgram, "u_sampler"), 1);
+		gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+	}
+
 }
 
 

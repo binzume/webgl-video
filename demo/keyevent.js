@@ -1,14 +1,73 @@
 
 
+var repeat = false;
+
 function playOrPause() {
-    if (document.getElementById('video').paused) {
-		document.getElementById('video').play();
+    if (videoElement.paused) {
+		videoElement.play();
     } else {
-		document.getElementById('video').pause();
+		videoElement.pause();
     }
 }
 
-function onKeyDown(event) {
+function toggleRepeat() {
+	repeat = !repeat;
+	videoElement.loop = repeat;
+	drawUiPanel("LOOP: "  + repeat);
+}
+
+
+var uiPanelTimer;
+
+function cancelUiPanelTimer() {
+	if (uiPanelTimer) {
+		clearTimeout(uiPanelTimer);
+	}
+}
+
+function hideUiPanel() {
+	uiPanelVisible = false;
+	canvasElement.style.cursor = 'none';
+}
+
+function hideUiPanelAfter(t) {
+	cancelUiPanelTimer();
+	uiPanelTimer = setTimeout(hideUiPanel ,t);
+}
+
+function drawUiPanel(text) {
+	if (uiPanelTexture) {
+		var canvas = document.getElementById("gluicanvas");
+		var c = canvas.getContext("2d");
+		c.clearRect(0, 0, 512, 512);
+		c.fillStyle = "rgba(0, 0, 200, 0.5)";
+		c.fillRect (100, 200, 300, 50);
+		c.fillStyle = "#ffffff";
+		c.fillText(text, 120, 230);
+		updateTexture(uiPanelTexture, canvas);
+	}
+
+	uiPanelVisible = true;
+	canvasElement.style.cursor = 'auto';
+	hideUiPanelAfter(2000);
+}
+
+function formatMMSS(t) {
+    var ss = Math.floor(t);
+    var mm = Math.floor(ss / 60);
+    ss -= mm * 60;
+    return mm + ":" + (ss < 10 ? "0" : "") + ss;
+}
+
+function displayCurrentPosition() {
+	drawUiPanel("Position: " + formatMMSS(videoElement.currentTime) + "  /  " + formatMMSS(videoElement.duration));
+}
+
+function displayCurrentState() {
+	drawUiPanel("Vol: " +  Math.floor(videoElement.volume * 100) + "% SPEED: " +  Math.floor(videoElement.playbackRate * 10)/10);
+}
+
+  function onKeyDown(event) {
     switch (event.keyCode) {
     case 13: // enter
         fullScreen(true);
@@ -20,16 +79,28 @@ function onKeyDown(event) {
         playOrPause();
         break;
     case 37: // left
-        document.getElementById('video').currentTime -= 10;
+        videoElement.currentTime -= (event.shiftKey ? 60 : 10);
+        displayCurrentPosition();
         break;
     case 39: // right
-        document.getElementById('video').currentTime += 10;
+        videoElement.currentTime += (event.shiftKey ? 60 : 10);
+        displayCurrentPosition();
         break;
     case 38:  // up
-        document.getElementById('video').volume += 0.05;
+        if (event.shiftKey) {
+            videoElement.playbackRate += 0.1;
+        } else {
+            videoElement.volume += 0.05;
+        }
+        displayCurrentState();
         break;
     case 40:  // down
-        document.getElementById('video').volume -= 0.05;
+        if (event.shiftKey) {
+            videoElement.playbackRate -= 0.1;
+        } else {
+            videoElement.volume -= 0.05;
+        }
+        displayCurrentState();
         break;
     case 87:  // W
     case 33:
@@ -55,6 +126,9 @@ function onKeyDown(event) {
           if (wrapx<-0.5) wrapx = -0.5;
           console.log('wrap:' + wrapx);
           refresh();
+        break;
+    case 76:
+		toggleRepeat();
         break;
     default:
         console.log('key code: ' + event.keyCode);
